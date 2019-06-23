@@ -1,0 +1,59 @@
+<VirtualHost 103.36.8.218:80>
+ServerAdmin webmaster@cloud.pancasuta.net
+DocumentRoot "/var/www/html/owncloud/"
+ServerName cloud.pancasuta.net
+ServerAlias www.cloud.pancasuta.net
+
+ErrorLog "/var/log/httpd/cloud.pancasuta.net-error_log"
+CustomLog "/var/log/httpd/cloud.pancasuta.net-access_log" combined
+
+<Directory "/var/www/html/owncloud/">
+DirectoryIndex index.html index.php
+Options FollowSymLinks
+AllowOverride All
+Require all granted
+</Directory>
+</VirtualHost>
+
+yum install php php-mysql php-pdo php-gd php-mbstring
+
+sudo vi /etc/selinux/config
+SELINUX=permissive
+yum clean all
+yum -y update
+rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+rpm -Uvh http://rpms.remirepo.net/enterprise/remi-release-7.rpm
+yum-config-manager --enable remi-php71
+yum install php php-mysqlnd php-pecl-zip php-xml php-mbstring php-gd php-mcrypt php-pear php-pspell php-pdo php-xml php-intl php-zip php-zlib
+
+php -i | grep -i php.ini
+Configuration File (php.ini) Path => /etc
+Loaded Configuration File => /etc/php.ini
+
+sed -i "s/post_max_size = 8M/post_max_size = 256M/" /etc/php.ini
+sed -i "s/upload_max_filesize = 2M/upload_max_filesize = 256M/" /etc/php.ini
+
+systemctl restart httpd.service
+
+cd /opt
+wget https://download.owncloud.org/community/owncloud-10.0.7.zip
+yum -y install unzip 
+unzip -d /var/www/html/ owncloud-10.0.7.zip
+
+chown apache:apache -R /var/www/html/owncloud/
+
+mysql -u root -p
+mysql> CREATE DATABASE ownclouddb;
+mysql> GRANT ALL PRIVILEGES ON ownclouddb.* TO 'ownclouduser'@'localhost' IDENTIFIED BY 'Y0ur-pa55w0rD' WITH GRANT OPTION;
+mysql> FLUSH PRIVILEGES;
+mysql> quit
+
+touch /etc/httpd/conf.d/owncloud.conf
+vi /etc/httpd/conf.d/owncloud.conf
+
+mkdir -p /opt/data
+chown apache:apache -R /opt/data/
+
+systemctl restart httpd
+yum -y install mod_ssl python-certbot-apache
+certbot --apache -d yourdomain.com
